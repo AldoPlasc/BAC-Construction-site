@@ -853,13 +853,9 @@
   <div class="form-card">
     <h2 style="font-size: 24px; color: var(--ink); margin-bottom: 6px;">Request Your Free Estimate</h2>
     <p style="font-size: 14.5px; color: var(--steel); margin-bottom: 30px;">Fill this out and we'll follow up to schedule your consultation.</p>
-    <!-- FORMSPREE SETUP: replace YOUR_FORM_ID below with the real endpoint from
-         https://formspree.io once the form is created (sign up with the email
-         that should receive these leads, then create a new form there). -->
-    <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
-      <input type="hidden" name="_subject" value="New estimate request — B.A.C Construction website">
+    <form id="estimateForm">
       <!-- honeypot field: invisible to real visitors, catches basic spam bots -->
-      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+      <input type="text" id="f-gotcha" style="display:none" tabindex="-1" autocomplete="off">
       <div class="form-row">
         <div class="form-field"><label for="f-name">Name</label><input id="f-name" name="Name" type="text" required></div>
         <div class="form-field"><label for="f-phone">Phone</label><input id="f-phone" name="Phone" type="tel" required></div>
@@ -883,8 +879,53 @@
         <label for="f-message">Tell us about your project</label>
         <textarea id="f-message" name="Project Details" rows="4"></textarea>
       </div>
-      <button type="submit" class="form-submit">Request My Estimate →</button>
+      <button type="submit" class="form-submit" id="f-submit">Request My Estimate →</button>
+      <p id="f-status" style="margin-top: 14px; font-size: 14px;" role="status"></p>
     </form>
+    <script>
+      document.getElementById('estimateForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var submitBtn = document.getElementById('f-submit');
+        var status = document.getElementById('f-status');
+        var checkedBoxes = Array.from(document.querySelectorAll('.checkbox-group input:checked')).map(function (cb) { return cb.name; });
+
+        var payload = {
+          _gotcha: document.getElementById('f-gotcha').value,
+          name: document.getElementById('f-name').value,
+          phone: document.getElementById('f-phone').value,
+          email: document.getElementById('f-email').value,
+          address: document.getElementById('f-address').value,
+          projectTypes: checkedBoxes,
+          details: document.getElementById('f-message').value
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending…';
+        status.textContent = '';
+
+        try {
+          var res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          var result = await res.json();
+          if (res.ok && result.ok) {
+            status.style.color = 'green';
+            status.textContent = "Thanks! We've received your request and will be in touch soon.";
+            e.target.reset();
+          } else {
+            throw new Error(result.error || 'Something went wrong');
+          }
+        } catch (err) {
+          status.style.color = '#b3261e';
+          status.textContent = "Sorry, something went wrong sending your request. Please call us at (650) 391-8498 instead.";
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Request My Estimate →';
+        }
+      });
+    </script>
   </div>
 </section>
 
